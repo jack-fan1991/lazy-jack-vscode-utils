@@ -18,3 +18,24 @@ export function showPicker(placeholder: string, items: any, onItemSelect: (item:
   }
   
   
+
+export function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  
+  export async function tryRun(fn:  () => Promise<boolean>|boolean , minutes: number=3 , msSleepSeconds: number = 5000): Promise<any | undefined> {
+    let count = 0
+    let maxTry = minutes * 60 / (msSleepSeconds / 1000)
+    while (count < maxTry) {
+      try {
+        let result = await fn()
+        if (!result) throw new Error(`tryRun retry remind ${count} times`)
+        return fn()
+      } catch (e) {
+        console.log(e)
+        count++
+        await sleep(msSleepSeconds)
+      }
+    }
+    return undefined
+  }

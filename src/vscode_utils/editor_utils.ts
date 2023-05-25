@@ -3,7 +3,7 @@ import vscode = require("vscode");
 import { existsSync, lstatSync, writeFile } from "fs";
 import * as fs from 'fs';
 import { logError } from "../logger/logger";
-import { convertPathIfWindow } from "./vscode_env_utils";
+import { convertPathIfWindow, getRootPath } from "./vscode_env_utils";
 
 
 export async function openEditor(filePath:string, focus?: boolean): Promise<vscode.TextEditor | undefined> {
@@ -72,4 +72,41 @@ export async function replaceText(filePath: string, searchValue: string, replace
         return false
 
     }
+}
+
+
+
+export function isFileExist(filePath: string) {
+    let root = getRootPath()
+    if (!filePath.startsWith(root)) {
+        filePath = path.join(root, filePath)
+    }
+    let exist = existsSync(filePath)
+    return exist
+}
+
+
+export async function createFile(
+    targetPath: string,
+    text: string,
+) {
+    if (existsSync(targetPath)) {
+        throw Error(`$targetPath already exists`);
+    }
+    fs.openSync(targetPath, 'w');
+    return new Promise<void>(async (resolve, reject) => {
+        writeFile(
+            targetPath,
+            text,
+            "utf8",
+            (error) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                resolve();
+
+            }
+        );
+    });
 }

@@ -36,12 +36,23 @@ export async function activate(context: vscode.ExtensionContext) {
 export function deactivate() { }
 */
 
-export class BaseTreeDataProvider implements vscode.TreeDataProvider<SideBarEntryItem> {
-    readonly supportScripts: TreeScriptModel[] = []
-    readonly providerLabel: string=''
+export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<SideBarEntryItem> {
+    // 用於註冊在package.json
+    
+    // "views": {
+    //     "explorer": [
+    //         {
+    //             "id": "lazyjack.sidebar",
+    //             "name": "Lazy Jack",
+    //             "when": "explorerResourceIsFolder && explorerViewletVisible && !inputFocus"
+    //         }
+    //     ]
+    // },
+    abstract viewsId():string
+    abstract supportScripts():TreeScriptModel[]
     constructor(private workspaceRoot?: string) { 
     }
-    ///  part tou
+
     public static  parseScripts(scripts: TreeScriptModel[]): SideBarEntryItem[] {
         let childrenList: SideBarEntryItem[] = []
         for (let index = 0; index < scripts.length; index++) {
@@ -63,26 +74,33 @@ export class BaseTreeDataProvider implements vscode.TreeDataProvider<SideBarEntr
 
     /// register to vscode
     register(context : vscode.ExtensionContext){
-        vscode.window.registerTreeDataProvider(this.providerLabel, this);
+        vscode.window.registerTreeDataProvider(this.viewsId(), this);
     }
 
     getTreeItem(element: SideBarEntryItem): vscode.TreeItem {
         return element
     }
     getChildren(): vscode.ProviderResult<SideBarEntryItem[]> {
-        return []
+        return  Promise.resolve(BaseTreeDataProvider.parseScripts(this.supportScripts()));
     }
 
-    /// implement this method to handle your action from TreeScriptModel
+    // 分發事件
+    dispatchEvent(context: vscode.ExtensionContext,scriptModel: TreeScriptModel) {
+        //default run terminal
+        if (scriptModel.scriptsType == ScriptsType.terminal) {
+            runTerminal(scriptModel.script)
+        }
+        else{
+            runCommand(scriptModel.script)
+        }
+
+    }
+    // 在 extension.ts 會註冊 ../sidebar_command_onselect
+    // BaseTreeDataProvider 皆會收到命令 並透過 handleCommand 處理進行分發
     handleCommand(context: vscode.ExtensionContext, scriptModel: TreeScriptModel) {
-        let allScripts = this.supportScripts.map((item) => { return item.script })
+        let allScripts = this.supportScripts().map((item) => { return item.script })
         if (allScripts.includes(scriptModel.script)) {
-            if (scriptModel.scriptsType == ScriptsType.terminal) {
-                runTerminal(scriptModel.script)
-            }
-            else{
-                runCommand(scriptModel.script)
-            }
+            this.dispatchEvent(context,scriptModel)
         }
     }
 }
