@@ -1,0 +1,29 @@
+{
+  "name": "lazy-jack-vscode-utils",
+  "version": "1.0.0",
+  "description": "lazy-jack-vscode-utils",
+  "main": "out/index.js",
+  "files": [
+    "out"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^18.15.11",
+    "@types/vscode": "^1.78.0",
+    "axios": "^1.3.2",
+    "change-case": "^4.1.2",
+    "cheerio": "^1.0.0-rc.12",
+    "iconv-lite": "^0.6.3",
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.19",
+    "vscode": "^1.1.37",
+    "yaml": "^2.2.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.5",
+    "@types/lodash": "^4.14.194"
+  }
+}
