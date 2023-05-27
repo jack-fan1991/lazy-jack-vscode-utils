@@ -9,41 +9,35 @@ export type TerminalCommand = {
     mac: string;
   };
 
-export function runTerminal(cmd: string, terminalName: string = '',enter:boolean=false) {
+function findTerminalAndActivate(name:string):vscode.Terminal{
+    const terminal = vscode.window.terminals.find(t=>t.name == name);
+    if(terminal){
+        terminal.show();
+    }
+    else{
+        const newTerminal = vscode.window.createTerminal(name);
+        newTerminal.show();
+    }
+    return  vscode.window.activeTerminal!;
+}
+
+export function runTerminal(cmd: string, terminalName: string = "",enter:boolean=false):vscode.Terminal {
     vscode.window.showInformationMessage('正在執行' + cmd + ' 命令...');
-    const terminal = vscode.window.activeTerminal;
-    if (!terminal?.name.startsWith('Lazy_Jack')) {
-        const newTerminal = vscode.window.createTerminal('Lazy_Jack');
-        newTerminal.show();
-        newTerminal.sendText(cmd);
-        if(enter){
-            newTerminal.sendText('\r');
-        }
-        return;
-    }
-    else if (terminalName != '' && terminal.name != terminalName) {
-        const newTerminal = vscode.window.createTerminal(`Lazy_Jack ${terminalName}`);
-        newTerminal.show();
-        newTerminal.sendText(cmd);
-        if(enter){
-            newTerminal.sendText('\r');
-        }
-        return;
-    }
-    terminal.show();
+    terminalName = 'Lazy Jack '+terminalName
+   let  terminal = findTerminalAndActivate(terminalName)
     terminal.sendText(cmd);
     if(enter){
         terminal.sendText('\r');
     }
-
+    return terminal;
 }
 
-export function runCommand(command: string, onDone?: (stdout: string) => void, onError?: (stdout: string) => void, cmdOnRoot = true,forceCmd:boolean=false): Promise<string> {
+export function runCommand(command: string, cwdPath :string|undefined=undefined,forceCmd:boolean=false): Promise<string> {
     const cwd = vscode_env_utils.getRootPath();
-    if(cmdOnRoot && cwd==null){
+    if(cwd && cwd==null){
         logError('No active workspace folder was found.')
     }
-    if (cmdOnRoot) {
+    if (cwd) {
         if (vscode_env_utils.isWindows()) {
             command = "cd " + cwd + ` ;  ${command}`
         } else {
@@ -51,18 +45,12 @@ export function runCommand(command: string, onDone?: (stdout: string) => void, o
         }
     }
     if (vscode_env_utils.isWindows()&&!forceCmd) {
-        return runPowerShellCommand(command, onDone, onError)
+        return runPowerShellCommand(command)
     }
     return new Promise((resolve, reject) => {
         child_process.exec(command, (error, stdout, stderr) => {
             console.log(`${stderr}`);
-            if (onDone != null) {
-                onDone(stdout)
-            }
             if (error) {
-                if (onError != null) {
-                    onError(error.message)
-                }
                 reject(error);
             } else {
                 resolve(stdout);
@@ -71,7 +59,7 @@ export function runCommand(command: string, onDone?: (stdout: string) => void, o
     });
 }
 
-export function runPowerShellCommand(command: string, onDone?: (stdout: string) => void, onError?: (stdout: string) => void,): Promise<string> {
+export function runPowerShellCommand(command: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
         const powershell = child_process.spawn('powershell.exe', [command]);
 
@@ -80,23 +68,15 @@ export function runPowerShellCommand(command: string, onDone?: (stdout: string) 
 
         powershell.stdout.on('data', (data) => {
             stdout += iconv.decode(data, 'cp936');
-            if (onDone != null) {
-                onDone(stdout)
-            }
         });
 
         powershell.stderr.on('data', (data) => {
             stderr += iconv.decode(data, 'cp936');
-            if (onError != null) {
-                onError(stderr)
-            }
+    
         });
 
         powershell.on('close', (code) => {
             if (code !== 0) {
-                if (onError != null) {
-                    onError(stderr)
-                }
                 reject(new Error(`PowerShell command failed with code ${code}: ${stderr}`));
             } else {
                 resolve(stdout.trim());

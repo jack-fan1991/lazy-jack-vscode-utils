@@ -1,7 +1,6 @@
 import { logInfo } from "../../../logger/logger";
 import { TerminalCommand, runCommand } from "../../../terminal_utils/terminal_utils";
 import { getActivateText, saveActivateEditor } from "../../../vscode_utils/activate_editor_utils";
-import { openEditor } from "../../../vscode_utils/editor_utils";
 import { isWindows } from "../../../vscode_utils/vscode_env_utils";
 import { onDart } from "../../language_utils";
 import { getPubspecAsText, getPubspecDependencyOverridePath, getPubspecPath, openYamlEditor, replaceInPubspecFile } from "./pubspec_utils";
@@ -52,7 +51,7 @@ let versionPickerCache = new Map<string, any>()
 let isFirstOpen = true
 
 
-export async function parseDartGitExtensionInYaml(showUpdate: boolean = false) {
+export async function checkGitExtensionInYamlIfDart(showUpdate: boolean = false) {
     gitExtensions = []
     gitDependenciesOverrides = []
     gitDependenciesPickerList = []
@@ -186,8 +185,8 @@ function parseIfOverrideMark(): OverrideDependenciesInfo[] {
 }
 
 
-export async function selectToUpdate() {
-    await parseDartGitExtensionInYaml()
+export async function selectUpdateDependency() {
+    await checkGitExtensionInYamlIfDart()
     showPicker('Select dependencies', gitDependenciesPickerList, (item) => {
         let dependenciesInfo = gitExtensions.filter((x) => x.name == item.label)[0]
         let dependencyOverride = gitDependenciesOverrides.filter((x) => x.name.includes(dependenciesInfo.name))[0]

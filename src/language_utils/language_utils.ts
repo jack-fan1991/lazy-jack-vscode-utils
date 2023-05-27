@@ -5,6 +5,7 @@ import { getPubspecAsMap } from './dart/pubspec/pubspec_utils';
 import { getRootPath } from '../vscode_utils/vscode_env_utils';
 import { readFileToText } from '../vscode_utils/editor_utils';
 import { logError } from '../logger/logger';
+import { getPackageJsonAsMap } from './typescript/typescript';
 export * as analyze_dart_git_dependency from './dart/pubspec/analyze_dart_git_dependency';
 export * as pubspec_utils from './dart/pubspec/pubspec_utils';
 export * as update_git_dependency from './dart/pubspec/update_git_dependency';
@@ -21,7 +22,7 @@ export function isActiveEditorLanguage(languageId: string) {
     return vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === languageId;
 }
 
-export async function onDart(onYamlParse: (pubspec: any) => any, onError: () => any, parseYaml: boolean = false) {
+export async function onDart(onYamlParse: (pubspec: any) => any, onError: () => any|undefined, parseYaml: boolean = false) {
     if (vscode.workspace.rootPath == undefined) {
         return
     }
@@ -30,7 +31,7 @@ export async function onDart(onYamlParse: (pubspec: any) => any, onError: () => 
     let yaml;
     const files = await vscode.workspace.findFiles(filePath);
     if (files.length <= 0) {
-        logError('當前不是flutter 專案');
+        logError('當前不是flutter 專案',false);
         return onError()
     }
     if (parseYaml) {
@@ -45,7 +46,7 @@ export async function onDart(onYamlParse: (pubspec: any) => any, onError: () => 
 }
 
   
-  export async function onGit(getData: () => any[], errorData: () => any[]) {
+  export async function onGit(getData: () => any, errorData: () => any[]) {
     let workspace = getRootPath()
     if (fs.existsSync(`${workspace}/.git`)) {
       return getData()
@@ -66,7 +67,7 @@ export async function onTypeScript(getData: (data: any) => any, errorData: () =>
       return errorData()
     }
     if (returnData) {
-      data = readFileToText(absPath)
+      data = await getPackageJsonAsMap()
       if(data   == undefined){
         logError('onTypeScript data is undefined')
         logError(`project => ${getRootPath()}`)

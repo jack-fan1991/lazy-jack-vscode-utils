@@ -2,8 +2,9 @@ import path = require("path");
 import vscode = require("vscode");
 import { existsSync, lstatSync, writeFile } from "fs";
 import * as fs from 'fs';
-import { logError } from "../logger/logger";
+import { logError, logInfo } from "../logger/logger";
 import { convertPathIfWindow, getRootPath } from "./vscode_env_utils";
+import * as yaml from "yaml";
 
 
 export async function openEditor(filePath:string, focus?: boolean): Promise<vscode.TextEditor | undefined> {
@@ -109,4 +110,94 @@ export async function createFile(
             }
         );
     });
+}
+
+
+export function getSelectedText() {
+    let editor = vscode.window.activeTextEditor
+    if (!editor)
+        throw new Error('No active editor');
+    let selection = editor.selection
+    let text = editor.document.getText(selection)
+    return text
+}
+
+export function getActivateEditorFileName(showFileType: boolean = false): string {
+    let file = path.basename(getActivateEditorFilePath())
+    return showFileType ? file : file.split('.')[0]
+}
+
+export function getActivateEditorFilePath(): string {
+    let editor = vscode.window.activeTextEditor
+    if (!editor)
+        throw new Error('No active editor');
+    return editor.document.fileName
+}
+
+export function getCursorLineText() {
+    let editor = vscode.window.activeTextEditor
+    if (!editor) {
+        logError(`[No active editor]=> getCursorLineText`, false)
+        return
+    }
+    const position = editor.selection.active;
+    return editor.document.lineAt(position.line).text
+}
+
+export function getActivateEditor(): vscode.TextEditor {
+    let editor = vscode.window.activeTextEditor
+    if (!editor)
+        throw new Error('No active editor');
+    return editor
+}
+
+export function getActivateFileAsUri(): vscode.Uri {
+    let editor = vscode.window.activeTextEditor
+    if (!editor)
+        throw new Error('No active editor');
+    return editor.document.uri
+}
+export function getFolderPath(document: vscode.TextDocument): string {
+    return path.dirname(convertPathIfWindow(document.fileName));
+}
+
+export function removeFolderPath(document: vscode.TextDocument) {
+    let currentDir = path.dirname(document.fileName);
+    return document.fileName.replace(currentDir, '')
+}
+
+
+
+export function getRelativePath(file1: string, file2: string, fileName: string | undefined = undefined): string {
+    file1 = file1.replace(/\\/g, '/')
+    file2 = file2.replace(/\\/g, '/')
+    const relativePath = vscode.workspace.asRelativePath(file1, true);
+    const relativePath2 = vscode.workspace.asRelativePath(file2, true);
+    const relate = path.relative(path.dirname(relativePath), path.dirname(relativePath2))
+    if (fileName != undefined) {
+        return path.join(relate, fileName).replace(/\\/g, '/')
+    }
+    return relate.replace(/\\/g, '/');
+}
+
+
+export function getAbsFilePath(uri: vscode.Uri): string {
+    let path = uri.path
+    let split = path.split(':')
+    if (split.length > 1) {
+        path = split[0].replace('/', '') + ':' + split[1]
+    }
+    return path
+}
+
+export async function getYAMLFileContent(path: string | undefined): Promise<Record<string, any> | undefined> {
+    try {
+      if (path==undefined) throw new Error("path is undefined");
+      logInfo(`正在解析 ${path}`,true)
+      const fileContents = fs.readFileSync(path, 'utf-8');
+      return yaml.parse(fileContents);
+    } catch (e) {
+      logError(`getYAMLFileContent ${e}`,false)
+    }
+  
 }

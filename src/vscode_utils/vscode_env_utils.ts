@@ -26,6 +26,11 @@ export function convertPathIfWindow(path: string): string {
     }
 }
 
+export function getWorkspace() {
+    let path = getWorkspacePath('')
+    return getRootPath().split('/').pop();
+}
+
 export function getRootPath() {
     let path = getWorkspacePath('')
     return convertPathIfWindow(path!);

@@ -1,8 +1,7 @@
-import * as yaml from "yaml";
 import * as fs from 'fs';
 import { logError, logInfo } from "../../../logger/logger";
 import { getWorkspacePath } from "../../../vscode_utils/vscode_env_utils";
-import { openEditor, readFileToText, replaceText } from "../../../vscode_utils/editor_utils";
+import { getYAMLFileContent, openEditor, readFileToText, replaceText } from "../../../vscode_utils/editor_utils";
 import * as vscode from 'vscode';
 
 
@@ -38,17 +37,7 @@ export async function getPubspecAsMap(): Promise<Record<string, any> | undefined
     return getYAMLFileContent(pubspecLockPath);
   }
   
-  async function getYAMLFileContent(path: string | undefined): Promise<Record<string, any> | undefined> {
-      try {
-        if (path==undefined) throw new Error("path is undefined");
-        logInfo(`正在解析 ${path}`,true)
-        const fileContents = fs.readFileSync(path, 'utf-8');
-        return yaml.parse(fileContents);
-      } catch (e) {
-        logError(`getYAMLFileContent ${e}`,false)
-      }
-    
-  }
+
   
 export function getYAMLFileText(path: string ){
  return readFileToText(path)

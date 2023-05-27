@@ -1,5 +1,4 @@
 import { runCommand, runTerminal } from "../../terminal_utils/terminal_utils";
-import { sidebar_command_onselect } from "./sidebar";
 import { ScriptsType, SideBarEntryItem, TreeScriptModel } from "./sidebar_model"
 import * as vscode from 'vscode';
 
@@ -37,6 +36,7 @@ export function deactivate() { }
 */
 
 export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<SideBarEntryItem> {
+    static sidebar_command_onselect = 'sidebar.command.onselect'
     // 用於註冊在package.json
     
     // "views": {
@@ -48,7 +48,9 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
     //         }
     //     ]
     // },
-    abstract viewsId():string
+    viewsId():string{
+        return this.constructor.name
+    }
     abstract supportScripts():TreeScriptModel[]
     constructor(private workspaceRoot?: string) { 
     }
@@ -63,7 +65,7 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
                 script.scriptsType,
             )
             item.command = {
-                command: sidebar_command_onselect, //命令id
+                command: BaseTreeDataProvider.sidebar_command_onselect, //命令id
                 title: "run" + scripts[index].label + "on" + scripts[index].scriptsType,
                 arguments: [scripts[index]], //命令接收的参数
             }
@@ -73,7 +75,7 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
     }
 
     /// register to vscode
-    register(context : vscode.ExtensionContext){
+    registerToVscode(context : vscode.ExtensionContext){
         vscode.window.registerTreeDataProvider(this.viewsId(), this);
     }
 
@@ -86,6 +88,10 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
 
     // 分發事件
     dispatchEvent(context: vscode.ExtensionContext,scriptModel: TreeScriptModel) {
+        if(scriptModel.itemAction != undefined){
+            scriptModel.itemAction()
+            return
+        }
         //default run terminal
         if (scriptModel.scriptsType == ScriptsType.terminal) {
             runTerminal(scriptModel.script)

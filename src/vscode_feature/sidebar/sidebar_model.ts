@@ -12,6 +12,7 @@ export type TreeScriptModel = {
     label: string;
     script: string;
     description?: string;
+    itemAction?: any;
 
 };
 
