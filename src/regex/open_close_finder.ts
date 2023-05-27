@@ -1,6 +1,7 @@
 
 import * as vscode from 'vscode';
 import { biggerCloseRegex, biggerOpenRegex, findClassRegex, smallCloseRegex, smallOpenRegex, } from './regex_utils';
+import { logInfo } from '../logger/logger';
 
  
 export class OpenCloseFinder {
@@ -9,10 +10,12 @@ export class OpenCloseFinder {
     openRegExp: RegExp;
     closeRegExp: RegExp;
     reverse: boolean;
-    constructor(openRegExp: RegExp, closeRegExp: RegExp, reverse: boolean = false) {
+    debug: boolean ;
+    constructor(openRegExp: RegExp, closeRegExp: RegExp, reverse: boolean = false,debug:boolean=false) {
         this.openCount = 0;
         this.closeCount = 0;
         this.reverse = reverse
+        this.debug = debug
         if (reverse) {
             this.openRegExp = closeRegExp;
             this.closeRegExp = openRegExp;
@@ -41,8 +44,21 @@ export class OpenCloseFinder {
         this.closeCount -= number;
     }
 
-    findRange(document: vscode.TextDocument, startLine: number): vscode.Range | undefined {
-        return this.reverse ? this.findReverse(document, startLine) : this.sequence(document, startLine)
+    findRange(document: vscode.TextDocument, startLine: number,debug:boolean|undefined=undefined): vscode.Range | undefined {
+        if(debug!=undefined){
+            this.debug = debug
+        }
+        let finTextRange= this.reverse ? this.findReverse(document, startLine) : this.sequence(document, startLine)
+        if(this.debug){
+            logInfo(`FinRange in  => ${document.fileName}`)
+            logInfo(`Use finder => ${this.constructor.name}`)
+            logInfo(`Target line text => ${document.lineAt(startLine).text}`)
+            logInfo(`find text between => ${this.openRegExp} and ${this.closeRegExp}`)
+            logInfo(`is reverse => ${this.reverse}`)
+            logInfo(`find result ${document.getText(finTextRange)}`)
+
+        }
+        return finTextRange
     }
 
     private findReverse(document: vscode.TextDocument, startLine: number): vscode.Range | undefined {
@@ -111,20 +127,20 @@ export class OpenCloseFinder {
 }
 
 export class BiggerOpenCloseFinder extends OpenCloseFinder {
-    constructor(reverse: boolean = false) {
-        super(biggerOpenRegex, biggerCloseRegex, reverse)
+    constructor(reverse: boolean = false,debug:boolean=false) {
+        super(biggerOpenRegex, biggerCloseRegex, reverse ,debug)
     }
 }
 
 export class SmallerOpenCloseFinder extends OpenCloseFinder {
-    constructor(reverse: boolean = false) {
-        super(biggerOpenRegex, biggerCloseRegex, reverse)
+    constructor(reverse: boolean = false ,debug:boolean=false) {
+        super(smallOpenRegex, smallCloseRegex, reverse,debug)
     }
 }
 
 export class FlutterOpenCloseFinder extends OpenCloseFinder {
-    constructor() {
-        super(biggerOpenRegex, biggerCloseRegex)
+    constructor( debug:boolean=false) {
+        super(biggerOpenRegex, biggerCloseRegex, false,debug)
     }
 
     findRange(document: vscode.TextDocument, startLine: number): vscode.Range | undefined {

@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import { logError, logInfo } from "../logger/logger";
 import { convertPathIfWindow, getRootPath } from "./vscode_env_utils";
 import * as yaml from "yaml";
+import { reFormat } from "./activate_editor_utils";
 
 
 export async function openEditor(filePath:string, focus?: boolean): Promise<vscode.TextEditor | undefined> {
@@ -200,4 +201,21 @@ export async function getYAMLFileContent(path: string | undefined): Promise<Reco
       logError(`getYAMLFileContent ${e}`,false)
     }
   
+}
+
+
+
+export function replaceSelectionText(range: vscode.Range | undefined, replaceWith: (selectText: string) => string) {
+    let editor = vscode.window.activeTextEditor
+    if (!editor) {
+        logError(`[No active editor]=> replaceSelectionText`, false)
+        return
+    }
+    const selection = range ?? editor.selection;
+    const text = editor.document.getText(selection);
+    editor.edit(editBuilder => {
+        let replaceText = replaceWith(text)
+        editBuilder.replace(selection, replaceText)
+    })
+    reFormat()
 }
