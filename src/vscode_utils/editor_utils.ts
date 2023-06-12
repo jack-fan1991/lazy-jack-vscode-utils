@@ -3,7 +3,8 @@ import vscode = require("vscode");
 import { existsSync, lstatSync, writeFile } from "fs";
 import * as fs from 'fs';
 import { logError } from "../logger/logger";
-import { convertPathIfWindow, getRootPath } from "./vscode_env_utils";
+import { convertPathIfWindow, getRootPath, getWorkspacePath } from "./vscode_env_utils";
+import { runCommand } from "../terminal_utils/terminal_utils";
 
 
 export async function openEditor(filePath:string, focus?: boolean): Promise<vscode.TextEditor | undefined> {
@@ -93,7 +94,7 @@ export async function createFile(
     if (existsSync(targetPath)) {
         throw Error(`$targetPath already exists`);
     }
-    fs.openSync(targetPath, 'w');
+    runCommand(`mkdir -p ${getWorkspacePath('lib/application')}`)
     return new Promise<void>(async (resolve, reject) => {
         writeFile(
             targetPath,
@@ -110,3 +111,14 @@ export async function createFile(
         );
     });
 }
+
+ export  async  function listFilesInDirectory(directory: vscode.Uri): Promise<string[]> {
+    const files: string[] = [];
+    const entries = await vscode.workspace.fs.readDirectory(directory);
+    for (const [name, type] of entries) {
+      if (type === vscode.FileType.File) {
+        files.push(name);
+      }
+    }
+    return files;
+  }
