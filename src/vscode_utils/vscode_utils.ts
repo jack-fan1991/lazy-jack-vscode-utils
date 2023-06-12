@@ -29,7 +29,7 @@ export function sleep(ms: number) {
     while (count < maxTry) {
       try {
         let result = await fn()
-        if (!result) throw new Error(`tryRun retry remind ${count} times`)
+        if (!result) throw new Error(`tryRun retry remind ${maxTry-count} times`)
         return fn()
       } catch (e) {
         console.log(e)
