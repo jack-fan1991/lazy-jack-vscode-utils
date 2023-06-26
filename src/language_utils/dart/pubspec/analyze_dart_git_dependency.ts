@@ -191,7 +191,9 @@ export async function selectUpdateDependency() {
         let dependenciesInfo = gitExtensions.filter((x) => x.name == item.label)[0]
         let dependencyOverride = gitDependenciesOverrides.filter((x) => x.name.includes(dependenciesInfo.name))[0]
         let versionPickerList = versionPickerCache.get(item.label)
-        showOverrideDependencySwitcher(dependenciesInfo, dependencyOverride)
+        if(dependencyOverride!=null){
+            showOverrideDependencySwitcher(dependenciesInfo, dependencyOverride)
+        }
         showPicker('Select version', versionPickerList, async (item) => {
             let version = item.label.replace(`${dependenciesInfo.name} => `, '')
             await vscode.commands.executeCommand(extension_updateDependencyVersion, dependenciesInfo, version, dependencyOverride), dependencyOverride
