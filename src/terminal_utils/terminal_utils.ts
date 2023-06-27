@@ -13,12 +13,13 @@ function findTerminalAndActivate(name:string):vscode.Terminal{
     const terminal = vscode.window.terminals.find(t=>t.name == name);
     if(terminal){
         terminal.show();
+        return terminal;
     }
     else{
         const newTerminal = vscode.window.createTerminal(name);
         newTerminal.show();
+        return newTerminal;
     }
-    return  vscode.window.activeTerminal!;
 }
 
 export function runTerminal(cmd: string, terminalName: string = "",enter:boolean=false):vscode.Terminal {
