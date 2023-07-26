@@ -7,7 +7,6 @@ import { getPubspecAsText, getPubspecDependencyOverridePath, getPubspecPath, ope
 import * as vscode from 'vscode';
 import { extension_updateDependencyVersion } from "./update_git_dependency";
 import { showPicker } from "../../../vscode_utils/vscode_utils";
-
 export class DependenciesInfo {
     name: string;
     uri: string;
@@ -51,11 +50,11 @@ let versionPickerCache = new Map<string, any>()
 let isFirstOpen = true
 
 
-export async function checkGitExtensionInYamlIfDart(showUpdate: boolean = false) {
+export async function checkGitExtensionInYamlIfDart(showUpdate: boolean = false): Promise<any> {
     gitExtensions = []
     gitDependenciesOverrides = []
     gitDependenciesPickerList = []
-    await onDart(async (pubspecData) => {
+    return await onDart(async (pubspecData) => {
         if (pubspecData == undefined) return undefined
         let gitDependencies = pubspecData['dependencies']
         let dependencyOverrides = pubspecData['dependency_overrides']
@@ -67,6 +66,7 @@ export async function checkGitExtensionInYamlIfDart(showUpdate: boolean = false)
             gitExtensions = convertToDependenciesInfo(gitDependencies)
             await convertDependenciesToPickerItems(pubspecData, gitExtensions, showUpdate)
         }
+        return pubspecData
     }, () => undefined, true)
 
 }
