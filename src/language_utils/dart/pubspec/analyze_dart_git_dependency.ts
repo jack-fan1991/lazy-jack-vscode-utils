@@ -84,13 +84,19 @@ async function convertDependenciesToPickerItems(pubspecData: any, gitDependencie
         let allBranch = await runCommand(isWindows() ? gitCommand.windows : gitCommand.mac)
         let currentVersion = pubspecData['dependencies'][dependenciesInfo.name]['git']['ref']
         // get all branch from git
-        for (let branch of allBranch.split('\n')) {
-            branch = branch.replace('refs/heads/', '').replace(/\r/g, '')
-            if (branch != '' && branch != 'main') {
-                versionPickerList.push({ label: `${branch}`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
+        let branchList = allBranch.split('\n').filter((x) => x != "");
+        for (let branch of branchList) {
+            if (branch === 'refs/heads/main'&& branchList.length == 1) {
+                versionPickerList.push({ label: `main`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
+            } else {
+                branch = branch.replace('refs/heads/', '').replace(/\r/g, '')
+                if (branch != '' && branch != 'main') {
+                    versionPickerList.push({ label: `${branch}`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
+                }
             }
+
         }
-        let lastVersion = versionPickerList[0].label.replace(`${dependenciesInfo.name} => `, '')
+        let lastVersion = versionPickerList[0].label
         if (showUpdate) {
             await showUpdateIfNotMatch(dependenciesInfo, lastVersion)
         }
@@ -113,14 +119,14 @@ async function showUpdateIfNotMatch(dependenciesInfo: DependenciesInfo, latestVe
                     await vscode.window.showInputBox({ prompt: `Please input ${dependenciesInfo.name} local path`, value: `../${dependenciesInfo.name}` }).then(async (localPath) => {
                         if (localPath == undefined) return
                         dependencyOverride = new OverrideDependenciesInfo(dependenciesInfo.name, localPath!)
-                        let editor  = await openYamlEditor()
+                        let editor = await openYamlEditor()
                         let text = getActivateText()
-                        let assertLineAt = text.split('\n').indexOf('assets:')-1
+                        let assertLineAt = text.split('\n').indexOf('assets:') - 1
                         editor.edit((editBuilder) => {
-                            editBuilder.insert(new vscode.Position(assertLineAt, 0),`\ndependency_overrides:\n  ${dependencyOverride.commentString()}\n` )
+                            editBuilder.insert(new vscode.Position(assertLineAt, 0), `\ndependency_overrides:\n  ${dependencyOverride.commentString()}\n`)
                         })
                         logInfo(`Activate ${dependencyOverride.name} local override ${dependencyOverride.path}`)
-                    
+
                     }
                     )
                 } else {
@@ -191,7 +197,7 @@ export async function selectUpdateDependency() {
         let dependenciesInfo = gitExtensions.filter((x) => x.name == item.label)[0]
         let dependencyOverride = gitDependenciesOverrides.filter((x) => x.name.includes(dependenciesInfo.name))[0]
         let versionPickerList = versionPickerCache.get(item.label)
-        if(dependencyOverride!=null){
+        if (dependencyOverride != null) {
             showOverrideDependencySwitcher(dependenciesInfo, dependencyOverride)
         }
         showPicker('Select version', versionPickerList, async (item) => {
