@@ -90,6 +90,19 @@ export function isFileExist(filePath: string) {
 }
 
 
+async function createAndWriteFile(path :string, text: string) {
+    const targetPath = vscode.Uri.file(path); // Replace with your desired file path
+
+
+    try {
+        await vscode.workspace.fs.writeFile(targetPath, Buffer.from(text, 'utf8'));
+
+        vscode.window.showInformationMessage('File created and written successfully!');
+    } catch (error) {
+        vscode.window.showErrorMessage(`Error: ${error}`);
+    }
+}
+
 export async function createFile(
     targetPath: string,
     text: string,
@@ -97,7 +110,7 @@ export async function createFile(
     if (existsSync(targetPath)) {
         throw Error(`$targetPath already exists`);
     }
-    runCommand(`mkdir -p ${getWorkspacePath('lib/application')}`)
+    // createAndWriteFile(targetPath, text)
     return new Promise<void>(async (resolve, reject) => {
         writeFile(
             targetPath,
