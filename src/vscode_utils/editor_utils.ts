@@ -4,7 +4,6 @@ import { existsSync, lstatSync, writeFile } from "fs";
 import * as fs from 'fs';
 import { logError, logInfo } from "../logger/logger";
 import { convertPathIfWindow, getRootPath, getWorkspacePath } from "./vscode_env_utils";
-import { runCommand } from "../terminal_utils/terminal_utils";
 import { reFormat } from "./activate_editor_utils";
 import * as yaml from "yaml";
 
