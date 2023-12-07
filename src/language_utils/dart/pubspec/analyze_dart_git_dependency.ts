@@ -148,6 +148,9 @@ function convertToDependenciesInfo(data: any): DependenciesInfo[] {
     let keys = Object.keys(data)
     for (let key of keys) {
         let extension = data[key]
+        if (extension == undefined ){
+            continue
+        }
         let gitInfo = extension['git']
         if (gitInfo != undefined) {
             gitExtensions.push(new DependenciesInfo(key, gitInfo['url'], gitInfo['ref']))
@@ -160,7 +163,7 @@ function convertToOverrideDependenciesInfo(data: any): OverrideDependenciesInfo[
     let keys = Object.keys(data)
     for (let key of keys) {
         let extension = data[key]
-        if (extension != undefined) {
+        if (extension != undefined && extension['path'] != undefined) {
             dependenciesOverrideInfo.push(new OverrideDependenciesInfo(key, extension['path']))
         }
     }
@@ -177,6 +180,9 @@ function parseIfOverrideMark(): OverrideDependenciesInfo[] {
         if (!start && line.includes('dependency_overrides:')) {
             start = true
         }
+        if (line.includes('flutter:')) {
+            start = false
+        }
         if (start && line.includes('#')) {
             let target = line + text[index + 1]
             let dependency = line.replace('#', '').replace(':', '').trim()
@@ -185,6 +191,7 @@ function parseIfOverrideMark(): OverrideDependenciesInfo[] {
                 dependenciesOverrideInfo.push(new OverrideDependenciesInfo(dependency, path ?? ''))
             }
         }
+        
     })
 
     return dependenciesOverrideInfo;
