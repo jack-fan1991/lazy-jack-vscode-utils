@@ -16,11 +16,14 @@ export async function updateGitSubModule(context: vscode.ExtensionContext) {
         let text = readFileToText(files[0].fsPath)
         vscode.window.showInformationMessage(`update submodules =>${text}`, '確定', '取消').then((option) => {
             if (option === '確定') {
+                vscode.window.showInformationMessage(`git submodule update --remote => update loading`);
                 runCommand(`git submodule update --init --recursive`).then((result) => {
                     if (result!= '') {
-                        vscode.window.showInformationMessage(`update submodules success`);
+                        vscode.window.showInformationMessage(`error: ${result}`);
                     }else{
-                        vscode.window.showInformationMessage(`submodules is up to date`);
+                        runCommand(`git submodule update --remote`).then((result) => {
+                            vscode.window.showInformationMessage(`${result}`);
+                        })
                     }
                 },);
             }
