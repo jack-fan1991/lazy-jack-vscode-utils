@@ -7,14 +7,18 @@ import { getPubspecAsText, getPubspecDependencyOverridePath, getPubspecPath, ope
 import * as vscode from 'vscode';
 import { extension_updateDependencyVersion } from "./update_git_dependency";
 import { showPicker } from "../../../vscode_utils/vscode_utils";
+import { List } from "lodash";
 export class DependenciesInfo {
     name: string;
     uri: string;
     branch: string;
-    constructor(name: string, uri: string, branch: string) {
+    hide: Array<string>;
+    constructor(name: string, uri: string, branch: string, hide: Array<string>) {
         this.name = name;
         this.uri = uri;
         this.branch = branch;
+        this.hide = hide;
+
     }
 }
 
@@ -86,14 +90,20 @@ async function convertDependenciesToPickerItems(pubspecData: any, gitDependencie
         // get all branch from git
         let branchList = allBranch.split('\n').filter((x) => x != "");
         for (let branch of branchList) {
-            if (branch === 'refs/heads/main'&& branchList.length == 1) {
-                versionPickerList.push({ label: `main`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
-            } else {
-                branch = branch.replace('refs/heads/', '').replace(/\r/g, '')
-                if (branch != '' && branch != 'main') {
-                    versionPickerList.push({ label: `${branch}`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
-                }
+            branch = branch.replace('refs/heads/', '').replace(/\r/g, '')
+            let hide = dependenciesInfo.hide
+            if (hide.includes(branch)) {
+                continue
             }
+            versionPickerList.push({ label: `${branch}`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
+            // if (branch === 'refs/heads/main'&& branchList.length == 1) {
+            //     versionPickerList.push({ label: `main`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
+            // } else {
+            //     branch = branch.replace('refs/heads/', '').replace(/\r/g, '')
+            //     if (branch != '' && branch != 'main') {
+            //         versionPickerList.push({ label: `${branch}`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
+            //     }
+            // }
 
         }
         let lastVersion = versionPickerList[0].label
@@ -148,12 +158,22 @@ function convertToDependenciesInfo(data: any): DependenciesInfo[] {
     let keys = Object.keys(data)
     for (let key of keys) {
         let extension = data[key]
-        if (extension == undefined ){
+        if (extension == undefined) {
             continue
         }
         let gitInfo = extension['git']
         if (gitInfo != undefined) {
-            gitExtensions.push(new DependenciesInfo(key, gitInfo['url'], gitInfo['ref']))
+            let hide: Array<string> = []
+            if (gitInfo['hideUpdate'] != undefined) {
+                if(typeof gitInfo['hideUpdate']  === 'string'){
+                    hide.push(gitInfo['hideUpdate'])
+                }else{
+                    for (let b of gitInfo['hideUpdate']) {
+                        hide.push(b)
+                    }
+                }
+            }
+            gitExtensions.push(new DependenciesInfo(key, gitInfo['url'], gitInfo['ref'], hide))
         }
     }
     return gitExtensions;
@@ -191,7 +211,7 @@ function parseIfOverrideMark(): OverrideDependenciesInfo[] {
                 dependenciesOverrideInfo.push(new OverrideDependenciesInfo(dependency, path ?? ''))
             }
         }
-        
+
     })
 
     return dependenciesOverrideInfo;
