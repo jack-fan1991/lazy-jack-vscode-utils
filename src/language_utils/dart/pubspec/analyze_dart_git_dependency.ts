@@ -1,12 +1,12 @@
 import { logInfo } from "../../../logger/logger";
-import { TerminalCommand, runCommand } from "../../../terminal_utils/terminal_utils";
+import { TerminalCommand, runCommand, runTerminal } from "../../../terminal_utils/terminal_utils";
 import { getActivateText, saveActivateEditor } from "../../../vscode_utils/activate_editor_utils";
 import { isWindows } from "../../../vscode_utils/vscode_env_utils";
 import { onDart } from "../../language_utils";
-import { getPubspecAsText, getPubspecDependencyOverridePath, getPubspecPath, openYamlEditor, replaceInPubspecFile } from "./pubspec_utils";
+import { getPubspecAsText, getPubspecDependencyOverridePath, getPubspecLockAsMap, getPubspecLockAsText, getPubspecPath, openYamlEditor, replaceInPubspecFile, replaceInPubspecLockFile } from "./pubspec_utils";
 import * as vscode from 'vscode';
 import { extension_updateDependencyVersion } from "./update_git_dependency";
-import { showPicker } from "../../../vscode_utils/vscode_utils";
+import { showPicker, sleep } from "../../../vscode_utils/vscode_utils";
 import { List } from "lodash";
 export class DependenciesInfo {
     name: string;
@@ -52,13 +52,17 @@ let gitDependenciesOverrides: OverrideDependenciesInfo[] = [];
 let gitDependenciesPickerList: { label: string; description: string; url: string; }[] = []
 let versionPickerCache = new Map<string, any>()
 let isFirstOpen = true
+let pubspecLock: any
+let pubspec: any
 
 
 export async function checkGitExtensionInYamlIfDart(showUpdate: boolean = false): Promise<any> {
     gitExtensions = []
     gitDependenciesOverrides = []
     gitDependenciesPickerList = []
+    pubspecLock = await getPubspecLockAsMap()
     return await onDart(async (pubspecData) => {
+        pubspec = pubspecData
         if (pubspecData == undefined) return undefined
         let gitDependencies = pubspecData['dependencies']
         let dependencyOverrides = pubspecData['dependency_overrides']
@@ -89,26 +93,30 @@ async function convertDependenciesToPickerItems(pubspecData: any, gitDependencie
         let currentVersion = pubspecData['dependencies'][dependenciesInfo.name]['git']['ref']
         // get all branch from git
         let branchList = allBranch.split('\n').filter((x) => x != "");
+        let showBranch = []
+        let onlyVersionRepo = true
         for (let branch of branchList) {
             branch = branch.replace('refs/heads/', '').replace(/\r/g, '')
-            let hide = dependenciesInfo.hide
-            if (hide.includes(branch)) {
+            let hideList = dependenciesInfo.hide
+            if (hideList.includes(branch)) {
                 continue
             }
             versionPickerList.push({ label: `${branch}`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
-            // if (branch === 'refs/heads/main'&& branchList.length == 1) {
-            //     versionPickerList.push({ label: `main`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
-            // } else {
-            //     branch = branch.replace('refs/heads/', '').replace(/\r/g, '')
-            //     if (branch != '' && branch != 'main') {
-            //         versionPickerList.push({ label: `${branch}`, description: `current version => ${currentVersion} `, url: dependenciesInfo.uri });
-            //     }
-            // }
-
+            showBranch.push(branch)
+            //檢查字串有幾個.
+            if (onlyVersionRepo) {
+                const matches: RegExpMatchArray | null = branch.match(/\./g);
+                let total = matches ? matches.length : 0;
+                if (total < 2) {
+                    onlyVersionRepo = false;
+                }
+            }
         }
         let lastVersion = versionPickerList[0].label
-        if (showUpdate) {
+        if (onlyVersionRepo && showUpdate) {
             await showUpdateIfNotMatch(dependenciesInfo, lastVersion)
+        } else {
+            checkCommitHashInYamlIfDart(dependenciesInfo)
         }
         versionPickerCache.set(dependenciesInfo.name, versionPickerList)
         // Add git dependency to picker list 
@@ -164,11 +172,11 @@ function convertToDependenciesInfo(data: any): DependenciesInfo[] {
         let gitInfo = extension['git']
         if (gitInfo != undefined) {
             let hide: Array<string> = []
-            if (gitInfo['hideUpdate'] != undefined) {
-                if(typeof gitInfo['hideUpdate']  === 'string'){
-                    hide.push(gitInfo['hideUpdate'])
-                }else{
-                    for (let b of gitInfo['hideUpdate']) {
+            if (gitInfo['skipBranch'] != undefined) {
+                if (typeof gitInfo['skipBranch'] === 'string') {
+                    hide.push(gitInfo['skipBranch'])
+                } else {
+                    for (let b of gitInfo['skipBranch']) {
                         hide.push(b)
                     }
                 }
@@ -255,5 +263,72 @@ function showOverrideDependencySwitcher(dependenciesInfo: DependenciesInfo, depe
 
 
     })
+
+}
+async function checkCommitHashInYamlIfDart(dependenciesInfo: DependenciesInfo) {
+    let libName = dependenciesInfo.name
+    let lockInfo = pubspecLock['packages'][libName]
+    let lockRef = lockInfo['description']['resolved-ref']
+    const gitCommand: TerminalCommand = {
+        windows: `git ls-remote '${dependenciesInfo.uri}' ${dependenciesInfo.branch} `,
+        mac: `git ls-remote '${dependenciesInfo.uri}' ${dependenciesInfo.branch} `,
+    };
+    let remoteCommitHash = await runCommand(isWindows() ? gitCommand.windows : gitCommand.mac)
+    const regex = /^([a-z0-9]{8})/;
+    let remoteRefHash = remoteCommitHash.match(regex)![1]
+    let localRefHash = lockRef.match(regex)![1]
+    if (remoteRefHash != localRefHash) {
+        vscode.window.showInformationMessage(`[ Update pubspec package : ${libName}]  : In Project from ${localRefHash}=>${remoteRefHash} `, 'Update').then(async (selectedOption) => {
+            if (selectedOption === 'Update') {
+                await updatePackage(libName,remoteCommitHash)
+            }
+        });
+    }
+}
+
+async function updatePackage(packageName: string,remoteCommitHash:string) {
+    let text = await getPubspecLockAsText()
+    let line = text.split('\n')
+    let packageString = []
+    let unPackageString = []
+    let start = false
+    for (let l of line) {
+        if (l.includes(packageName)) {
+            start = true
+        }
+        // 計算空格數量
+        const regex = /^\s+/;
+        const match = l.match(regex);
+        let total = 0
+        if(match ==undefined){
+            total =0
+        }else{
+            total =match[0].length
+        }
+
+        if (start) {
+            packageString.push(l)
+            unPackageString.push(`# ${l}`)
+            let isPackageStart =(total ==2||total==0||l=='')
+            if (isPackageStart&& !l.includes(packageName)) {
+                packageString.pop()
+                unPackageString.pop()
+                break
+            }
+        }
+
+
+    }
+    let packageText = packageString.join('\n')
+    let unPackageText = unPackageString.join('\n')
+    await replaceInPubspecLockFile(packageText, "")
+    await runTerminal('flutter pub get')
+
+   
+    logInfo(`${packageName} in last version : hash ${remoteCommitHash}`)
+
+
+
+
 
 }

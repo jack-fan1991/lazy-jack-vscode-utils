@@ -27,9 +27,11 @@ export async function onDart(onYamlParse: (pubspec: any) => any, onError: () => 
         return
     }
 
-    let filePath = '**/pubspec.yaml';
+    let pubspecfilePath = '**/pubspec.yaml';
+    let pubspecLock = '**/pubspec.lock';
+
     let yaml;
-    const files = await vscode.workspace.findFiles(filePath);
+    const files = await vscode.workspace.findFiles(pubspecfilePath);
     if (files.length <= 0) {
         logError('當前不是flutter 專案',false);
         return onError()
@@ -39,7 +41,7 @@ export async function onDart(onYamlParse: (pubspec: any) => any, onError: () => 
         if (yaml == undefined) {
             logError('onDart yaml is undefined')
             logError(`project => ${getRootPath()}`)
-            logError(`file => ${filePath}`)
+            logError(`file => ${pubspecfilePath}`)
         }
     }
     return onYamlParse(yaml)

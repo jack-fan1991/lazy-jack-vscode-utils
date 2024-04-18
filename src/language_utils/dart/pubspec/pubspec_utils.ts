@@ -31,6 +31,10 @@ export async function getPubspecAsMap(): Promise<Record<string, any> | undefined
     return getYAMLFileText(pubspecPath??'');
   }
   
+  export  function getPubspecLockAsText(): string {
+    const pubspecPath = getPubspecLockPath();
+    return getYAMLFileText(pubspecPath??'');
+  }
   
   export async function getPubspecLockAsMap(): Promise<Record<string, any> | undefined> {
     const pubspecLockPath = getPubspecLockPath();
@@ -45,6 +49,11 @@ export function getYAMLFileText(path: string ){
 
 export async function replaceInPubspecFile( searchValue: string, replaceValue: string): Promise<boolean> {
   const pubspecPath = getPubspecPath();
+  return await replaceText(pubspecPath!,searchValue,replaceValue)
+}
+
+export async function replaceInPubspecLockFile( searchValue: string, replaceValue: string): Promise<boolean> {
+  const pubspecPath = getPubspecLockPath();
   return await replaceText(pubspecPath!,searchValue,replaceValue)
 }
 
