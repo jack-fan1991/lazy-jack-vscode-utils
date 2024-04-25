@@ -219,7 +219,7 @@ export function getAbsFilePath(uri: vscode.Uri): string {
 export async function getYAMLFileContent(path: string | undefined): Promise<Record<string, any> | undefined> {
     try {
       if (path==undefined) throw new Error("path is undefined");
-      logInfo(`正在解析 ${path}`,true)
+    //   logInfo(`正在解析 ${path}`,true)
       const fileContents = fs.readFileSync(path, 'utf-8');
       return yaml.parse(fileContents);
     } catch (e) {
