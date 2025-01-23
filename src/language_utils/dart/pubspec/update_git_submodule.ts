@@ -18,13 +18,9 @@ export async function updateGitSubModule(context: vscode.ExtensionContext) {
             if (option === '確定') {
                 vscode.window.showInformationMessage(`git submodule update --remote => update loading`);
                 runCommand(`git submodule update --init --recursive`).then((result) => {
-                    if (result!= '') {
-                        vscode.window.showInformationMessage(`error: ${result}`);
-                    }else{
-                        runCommand(`git submodule update --remote`).then((result) => {
-                            vscode.window.showInformationMessage(`${result}`);
-                        })
-                    }
+                    runCommand(`git submodule foreach git pull origin main`).then((result) => {
+                        vscode.window.showInformationMessage(`${result}`);
+                    })
                 },);
             }
         });
