@@ -1,13 +1,6 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import { checkDirInEvn, isWindows, removeDirInEvn } from '../../../vscode_utils/vscode_env_utils';
-import { replaceInPubspecFile } from './pubspec_utils';
-import { logError, logInfo } from '../../../logger/logger';
 import { openEditor, readFileToText } from '../../../vscode_utils/editor_utils';
-import { runFlutterPubGet } from '../../../common/lazy_common';
-import { DependenciesInfo, OverrideDependenciesInfo } from './analyze_dart_git_dependency';
 import { runCommand } from '../../../terminal_utils/terminal_utils';
-import { showPicker } from '../../../vscode_utils/vscode_utils';
 
 
 export async function updateGitSubModule(context: vscode.ExtensionContext) {
@@ -15,14 +8,42 @@ export async function updateGitSubModule(context: vscode.ExtensionContext) {
     // test
     if (files.length > 0) {
         let text = readFileToText(files[0].fsPath)
-        vscode.window.showInformationMessage(`update submodules =>${text}`, '確定', '取消').then((option) => {
-            if (option === '確定') {
-                vscode.window.showInformationMessage(`git submodule update --remote => update loading`);
-                runCommand(`git submodule update --init --recursive`).then((result) => {
-                    runCommand(`git submodule foreach git pull origin main`).then((result) => {
-                        vscode.window.showInformationMessage(`${result}`);
-                    })
-                },);
+        vscode.window.showInformationMessage(`update submodules =>${text}`, 'Confirm', 'Cancel').then((option) => {
+            if (option === 'Confirm') {
+                // vscode.window.showInformationMessage(`git submodule update --remote => update loading`);
+                // runCommand(`git submodule update --init --recursive`).then((result) => {
+                //     runCommand(`git submodule foreach git pull origin main`).then((result) => {
+                //         vscode.window.showInformationMessage(`${result}`);
+                //     })
+                // },);
+
+                vscode.window.withProgress(
+                    {
+                        location: vscode.ProgressLocation.Window,
+                        title: '🔄 Updating Git Submodules...',
+                        cancellable: false
+                    },
+                    async () => {
+                        try {
+                            // 把 submodule init 完整
+                            await runCommand(`git submodule update --init --recursive`);
+                    
+                            // 拉每個 submodule 的最新 main
+                            await runCommand(`git submodule foreach 'git checkout main && git pull origin main'`);
+                    
+                            // 把主專案的 submodule commit pointer 加入 staging
+                            await runCommand(`git add .`);
+                    
+                            // 自動 commit（可選）
+                            await runCommand(`git commit -m "🛠 chore: update submodules to latest commit"`);
+                    
+                            vscode.window.showInformationMessage(`✅ Submodules updated and committed.`);
+                          } catch (e) {
+                            vscode.window.showErrorMessage(`❌ Submodule force update failed: ${e}`);
+                          }
+                    }
+                );
+
             }
         });
     }
