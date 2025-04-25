@@ -12,6 +12,7 @@ import { showPicker } from '../../../vscode_utils/vscode_utils';
 
 export async function updateGitSubModule(context: vscode.ExtensionContext) {
     const files = await vscode.workspace.findFiles(".gitmodules");
+    // test
     if (files.length > 0) {
         let text = readFileToText(files[0].fsPath)
         vscode.window.showInformationMessage(`update submodules =>${text}`, '確定', '取消').then((option) => {
