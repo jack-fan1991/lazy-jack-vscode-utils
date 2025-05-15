@@ -33,15 +33,15 @@ export async function onDart(onYamlParse: (pubspec: any) => any, onError: () => 
     let yaml;
     const files = await vscode.workspace.findFiles(pubspecfilePath);
     if (files.length <= 0) {
-        logError('當前不是flutter 專案',false);
+        // logError('當前不是flutter 專案',false);
         return onError()
     }
     if (parseYaml) {
         yaml = await getPubspecAsMap()
         if (yaml == undefined) {
-            logError('onDart yaml is undefined')
-            logError(`project => ${getRootPath()}`)
-            logError(`file => ${pubspecfilePath}`)
+            // logError('onDart yaml is undefined')
+            // logError(`project => ${getRootPath()}`)
+            // logError(`file => ${pubspecfilePath}`)
         }
     }
     return onYamlParse(yaml)
@@ -65,15 +65,15 @@ export async function onTypeScript(getData: (data: any) => any, errorData: () =>
     let data;
     const files = await vscode.workspace.findFiles(filePath);
     if (files.length <= 0) {
-      console.log('當前不是TypeScript 專案');
+      // console.log('當前不是TypeScript 專案');
       return errorData()
     }
     if (returnData) {
       data = await getPackageJsonAsMap()
       if(data   == undefined){
-        logError('onTypeScript data is undefined')
-        logError(`project => ${getRootPath()}`)
-        logError(`file => ${absPath}`)
+        // logError('onTypeScript data is undefined')
+        // logError(`project => ${getRootPath()}`)
+        // logError(`file => ${absPath}`)
       }
     }
     return getData(data)
