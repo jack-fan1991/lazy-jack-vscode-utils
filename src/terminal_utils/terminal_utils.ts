@@ -23,7 +23,7 @@ function findTerminalAndActivate(name:string):vscode.Terminal{
 }
 
 export function runTerminal(cmd: string, terminalName: string = "",enter:boolean=false):vscode.Terminal {
-    vscode.window.showInformationMessage('正在執行' + cmd + ' 命令...');
+    vscode.window.showInformationMessage('Run ' + cmd + '');
     terminalName = 'Lazy Jack '+terminalName
    let  terminal = findTerminalAndActivate(terminalName)
     terminal.sendText(cmd);
@@ -32,33 +32,52 @@ export function runTerminal(cmd: string, terminalName: string = "",enter:boolean
     }
     return terminal;
 }
-
-export function runCommand(command: string, cwdPath :string|undefined=undefined,forceCmd:boolean=false): Promise<string> {
+export function runCommand(
+    command: string,
+    cwdPath: string | undefined = undefined,
+    forceCmd: boolean = false
+): Promise<string> {
     const cwd = vscode_env_utils.getRootPath();
-    if(cwd && cwd==null){
-        logError('No active workspace folder was found.')
+
+    if (cwd === null || cwd === undefined) {
+        logError('No active workspace folder was found.');
+        return Promise.reject('No active workspace folder was found.');
     }
+
     if (cwd) {
         if (vscode_env_utils.isWindows()) {
-            command = "cd " + cwd + ` ;  ${command}`
+            command = `cd "${cwd}" ; ${command}`;
         } else {
-            command = "cd " + cwd + ` &&  ${command}`
+            command = `cd "${cwd}" && ${command}`;
         }
     }
-    if (vscode_env_utils.isWindows()&&!forceCmd) {
-        return runPowerShellCommand(command)
+
+    if (vscode_env_utils.isWindows() && !forceCmd) {
+        return runPowerShellCommand(command);
     }
+
     return new Promise((resolve, reject) => {
-        child_process.exec(command, (error, stdout, stderr) => {
-            console.log(`${stderr}`);
+        child_process.exec(command, {
+            env: {
+                ...process.env,
+                GITHUB_TOKEN: undefined 
+            }
+        }, (error, stdout, stderr) => {
+            if (stderr) {
+                console.error(stderr);
+            }
             if (error) {
                 reject(error);
             } else {
-                resolve(stdout);
+                resolve(stdout.trim());
             }
         });
     });
 }
+
+
+
+
 
 export function runPowerShellCommand(command: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
