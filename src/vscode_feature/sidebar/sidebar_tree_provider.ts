@@ -36,9 +36,11 @@ export function deactivate() { }
 */
 
 export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<SideBarEntryItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
     static sidebar_command_onselect = 'sidebar.command.onselect'
     // 用於註冊在package.json
-    
+
     // "views": {
     //     "explorer": [
     //         {
@@ -48,14 +50,18 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
     //         }
     //     ]
     // },
-    viewsId():string{
+    viewsId(): string {
         return this.constructor.name
     }
-    abstract supportScripts():TreeScriptModel[]
-    constructor(private workspaceRoot?: string) { 
+    abstract supportScripts(): TreeScriptModel[]
+    constructor(private workspaceRoot?: string) {
     }
 
-    public static  parseScripts(scripts: TreeScriptModel[]): SideBarEntryItem[] {
+    refresh(): void {
+        this._onDidChangeTreeData.fire(); // undefined 表示整棵樹都刷新
+    }
+
+    public static parseScripts(scripts: TreeScriptModel[]): SideBarEntryItem[] {
         let childrenList: SideBarEntryItem[] = []
         for (let index = 0; index < scripts.length; index++) {
             let script = scripts[index]
@@ -75,7 +81,7 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
     }
 
     /// register to vscode
-    registerToVscode(context : vscode.ExtensionContext){
+    registerToVscode(context: vscode.ExtensionContext) {
         vscode.window.registerTreeDataProvider(this.viewsId(), this);
     }
 
@@ -83,12 +89,24 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
         return element
     }
     getChildren(): vscode.ProviderResult<SideBarEntryItem[]> {
-        return  Promise.resolve(BaseTreeDataProvider.parseScripts(this.supportScripts()));
+        let items = this.supportScripts()
+        const uniqueItems = this.deduplicateBy(items, item => `${item.script}-${item.label}`);
+        return Promise.resolve(BaseTreeDataProvider.parseScripts(uniqueItems));
+    }
+
+    deduplicateBy<T>(array: T[], keyFn: (item: T) => string): T[] {
+        const seen = new Set<string>();
+        return array.filter(item => {
+            const key = keyFn(item);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
     }
 
     // 分發事件
-    dispatchEvent(context: vscode.ExtensionContext,scriptModel: TreeScriptModel) {
-        if(scriptModel.itemAction != undefined){
+    dispatchEvent(context: vscode.ExtensionContext, scriptModel: TreeScriptModel) {
+        if (scriptModel.itemAction != undefined) {
             scriptModel.itemAction()
             return
         }
@@ -96,7 +114,7 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
         if (scriptModel.scriptsType == ScriptsType.terminal) {
             runTerminal(scriptModel.script)
         }
-        else{
+        else {
             runCommand(scriptModel.script)
         }
 
@@ -106,7 +124,7 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
     handleCommand(context: vscode.ExtensionContext, scriptModel: TreeScriptModel) {
         let allScripts = this.supportScripts().map((item) => { return item.script })
         if (allScripts.includes(scriptModel.script)) {
-            this.dispatchEvent(context,scriptModel)
+            this.dispatchEvent(context, scriptModel)
         }
     }
 }

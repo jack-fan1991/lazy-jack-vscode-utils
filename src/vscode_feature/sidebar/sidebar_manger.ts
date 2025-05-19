@@ -6,6 +6,7 @@ import { openBrowser } from '../../vscode_utils/vscode_utils';
 
 export class SidebarManager {
     private sideBars: BaseTreeDataProvider[] = [];
+    public context: vscode.ExtensionContext | undefined
     constructor() { }
 
     public addSideBar(sideBar: BaseTreeDataProvider): SidebarManager {
@@ -14,6 +15,7 @@ export class SidebarManager {
     }
 
     public registerSideBar(context: vscode.ExtensionContext) {
+        this.context =context
         for (const sideBar of this.sideBars) {
             sideBar.registerToVscode(context);
         }
