@@ -112,7 +112,7 @@ export abstract class BaseTreeDataProvider implements vscode.TreeDataProvider<Si
         }
         //default run terminal
         if (scriptModel.scriptsType == ScriptsType.terminal) {
-            runTerminal(scriptModel.script)
+            runTerminal(scriptModel.script,"explore")
         }
         else {
             runCommand(scriptModel.script)
